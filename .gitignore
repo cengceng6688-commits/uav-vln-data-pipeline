@@ -1,0 +1,55 @@
+# macOS
+.DS_Store
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment files
+.env
+.env.*
+
+# Raw and generated data
+data/**/*.mp4
+data/**/*.mov
+data/**/*.MOV
+data/**/*.avi
+data/**/*.mkv
+data/**/*.wav
+data/**/*.json
+data/**/*.jsonl
+data/**/*.csv
+
+# Generated outputs
+outputs/**/*.mp4
+outputs/**/*.mov
+outputs/**/*.MOV
+outputs/**/*.avi
+outputs/**/*.mkv
+outputs/**/*.wav
+outputs/**/*.png
+outputs/**/*.jpg
+outputs/**/*.jpeg
+outputs/**/*.pdf
+outputs/**/*.csv
+outputs/**/*.json
+outputs/**/*.jsonl
+outputs/**/*.md
+
+# Current prototype default output folders
+mov_datasets/
+mp4_converted/
+final_dataset/
+
+# Logs
+*.log
