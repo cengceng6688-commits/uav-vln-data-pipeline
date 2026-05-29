@@ -8,7 +8,6 @@ The current midterm version focuses on dataset construction rather than model tr
 
 Current spoken instructions are mostly goal-level task descriptions rather than low-level action commands. The current midterm version does not provide ground-truth dx, dy, dyaw action labels. The dx, dy, dyaw interface is reserved for future extensions such as visual odometry, SLAM, sensor logs, UAV telemetry, or optional π0 fine-tuning.
 
-Mature dataset repositories such as VisDrone are used only as inspiration for dataset organization and release style, not for task design.
 
 ## Current Pipeline
 
