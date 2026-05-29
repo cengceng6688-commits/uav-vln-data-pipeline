@@ -1,115 +1,209 @@
-# Dataset Schema
+# UAV VLN Data Pipeline
 
-## Overview
+## Project Overview
 
-The dataset is represented as JSONL. Each line in `dataset_index.jsonl` is one processed sample record. The current data is goal-level navigation video data: each successful sample links a spoken goal-level instruction to a trimmed navigation clip and associated metadata.
+This repository is a pilot research prototype for constructing a real-world goal-level navigation video dataset from raw videos. Each input video is assumed to contain a spoken goal-level instruction at the beginning, followed by the corresponding navigation behavior.
 
-The current midterm version does not provide ground-truth low-level dx, dy, dyaw control labels. The action interface is retained for future extensions and for clearly marked pseudo-label experiments.
+The current midterm version focuses on dataset construction rather than model training. It produces aligned navigation clips, Whisper transcriptions, instruction analysis, quality metadata, summary reports, case visualizations, and ASR evaluation outputs.
 
-## Success Sample Schema
+Current spoken instructions are mostly goal-level task descriptions rather than low-level action commands. The current midterm version does not provide ground-truth `dx`, `dy`, `dyaw` action labels. The `dx`, `dy`, `dyaw` interface is reserved for future extensions such as visual odometry, SLAM, sensor logs, UAV telemetry, or optional π0 fine-tuning.
 
-```json
-{
-  "sample_id": "...",
-  "original_video": "...",
-  "navigation_clip": "...",
-  "instruction": "...",
-  "instruction_segments": [],
-  "speech_end_time": 0.0,
-  "visual_start_time": 0.0,
-  "navigation_start_time": 0.0,
-  "qa_status": "success",
-  "quality_score": {},
-  "instruction_analysis": {},
-  "action_format": "dx_dy_dyaw",
-  "actions": [],
-  "action_source": "empty",
-  "action_note": "...",
-  "motion_type": "unknown",
-  "source": "self_collected"
-}
+## Current Pipeline
+
+```text
+raw video
+  -> visual QA
+  -> Whisper transcription
+  -> speech-motion alignment
+  -> navigation clip trimming
+  -> instruction analysis
+  -> dataset_index.jsonl generation
+  -> summary report generation
+  -> case visualization
+  -> ASR evaluation
 ```
+
+The current implementation supports visual QA, Whisper transcription, speech-motion alignment, navigation clip trimming, instruction analysis, JSONL dataset indexing, summary reporting, case visualization, and ASR evaluation with a manually annotated transcript subset.
+
+## Dataset Schema
+
+The main dataset artifact is `dataset_index.jsonl`. Each line is one sample record. A detailed schema is provided in [docs/dataset_schema.md](docs/dataset_schema.md).
 
 Important fields:
 
-| Field | Description |
+| Field | Explanation |
 | --- | --- |
-| `sample_id` | Stable sample identifier, usually derived from the original video filename. |
-| `original_video` | Path to the raw or converted source video. |
-| `navigation_clip` | Path to the trimmed navigation clip after speech-motion alignment. |
+| `sample_id` | Stable sample identifier. |
+| `original_video` | Path to the source video. |
+| `navigation_clip` | Path to the trimmed navigation clip. |
 | `instruction` | Whisper-transcribed spoken instruction. |
-| `instruction_segments` | Whisper segment metadata used for speech timing analysis. |
-| `speech_end_time` | Estimated end time of the spoken instruction. |
-| `visual_start_time` | Estimated start time of visible motion from frame-difference QA. |
-| `navigation_start_time` | Start time used for trimming, currently the later of speech end and visual motion start. |
-| `qa_status` | Processing status, usually `success` or `failed`. |
-| `quality_score` | Visual QA metrics and thresholds. |
 | `instruction_analysis` | Goal-level versus low-level instruction analysis. |
-| `action_format` | Reserved action representation name, currently `dx_dy_dyaw`. |
-| `actions` | Empty or pseudo-action list in the current prototype; not ground-truth action labels. |
-| `action_source` | Source of action values, such as `empty` or a pseudo-label method. |
-| `action_note` | Explanation of action-label limitations. |
-| `motion_type` | Legacy coarse motion type field, currently not the main supervision target. |
-| `source` | Data source label, currently `self_collected`. |
+| `speech_end_time` | Estimated end time of the spoken instruction. |
+| `visual_start_time` | Estimated time when visual motion begins. |
+| `navigation_start_time` | Timestamp used to trim the navigation clip. |
+| `qa_status` | Processing status, such as `success` or `failed`. |
+| `quality_score` | Visual QA statistics and thresholds. |
+| `action_format` | Reserved action format, currently `dx_dy_dyaw`. |
+| `actions` | Empty or reserved in the current midterm version; not ground-truth labels. |
+| `action_note` | Explanation of action-label status and limitations. |
 
-## Failure Sample Schema
+The recommended midterm setting keeps `actions` empty. Any generated action values are pseudo-labels and must not be reported as ground-truth trajectories or control labels.
 
-```json
-{
-  "sample_id": "...",
-  "original_video": "...",
-  "qa_status": "failed",
-  "failure_reason": "...",
-  "debug_info": {}
-}
+## Output Structure
+
+Expected midterm output folder:
+
+```text
+outputs/
+  midterm_demo/
+    dataset_index.jsonl
+    clips/
+    report/
+    case_0/
+    case_1/
+    asr_eval/
 ```
 
-Failure records are written when a sample cannot be processed successfully. The `failure_reason` field should be concise and machine-readable where possible. The `debug_info` field can store additional diagnostic context.
+Contents:
 
-## Instruction Analysis Schema
+- `dataset_index.jsonl`: JSONL dataset index with one record per processed sample.
+- `clips/`: trimmed navigation clips.
+- `report/`: dataset summary JSON, CSV, and plots.
+- `case_0/`, `case_1/`: selected case visualizations for presentation.
+- `asr_eval/`: ASR evaluation summary and per-sample CER details.
 
-```json
-{
-  "instruction_type": "goal_level",
-  "instruction_actions": [],
-  "goal_keywords": [],
-  "goal_description": "...",
-  "analysis_note": "..."
-}
+## Running the Pipeline
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
 ```
 
-Fields:
+Run the recommended midterm pipeline:
 
-| Field | Description |
-| --- | --- |
-| `instruction_type` | Coarse instruction category, such as `goal_level`, `low_level_action`, `goal_level_with_action_hint`, or `unknown`. |
-| `instruction_actions` | Parsed low-level action hints when present. These are language-derived and should not be treated as measured control signals. |
-| `goal_keywords` | Goal or task keywords detected in the instruction. |
-| `goal_description` | Normalized or copied goal-level instruction description. |
-| `analysis_note` | Short explanation of the classification result. |
-
-## Quality Score Schema
-
-```json
-{
-  "baseline_score": 0.0,
-  "dynamic_motion_threshold": 0.0,
-  "max_motion_score": 0.0,
-  "shake_threshold": 55.0
-}
+```bash
+python3 scripts/run_pipeline.py \
+  --input_dir data/raw_videos \
+  --output_dir outputs/midterm_demo \
+  --whisper_model base \
+  --action_mode empty
 ```
 
-Fields:
+The recommended midterm action mode is `empty`, because the current dataset is goal-level and does not include ground-truth low-level action labels.
 
-| Field | Description |
-| --- | --- |
-| `baseline_score` | Baseline frame-difference score estimated from the initial stationary window. |
-| `dynamic_motion_threshold` | Motion threshold derived from the baseline score and configured offset. |
-| `max_motion_score` | Maximum frame-difference score observed during visual QA. |
-| `shake_threshold` | Threshold used to flag severe camera shake. |
+## Run Reports with the Example Dataset
 
-## Action Interface Note
+This repository includes a small synthetic metadata-only example dataset:
 
-The `action_format` and `actions` fields are included to keep the schema extensible. They are not ground-truth low-level control labels in the current midterm version.
+```text
+examples/sample_dataset_index.jsonl
+```
 
-Future action labels would require stronger motion sources, such as visual odometry, SLAM, synchronized sensor logs, or UAV telemetry. Any pseudo-actions generated before those sources are available must be clearly documented as non-ground-truth.
+This file does not contain real videos or private data. It is provided only for testing metadata parsing and report generation without running video processing or Whisper transcription.
+
+Run the report generator with the example dataset:
+
+```bash
+python3 scripts/generate_report.py \
+  --dataset_index examples/sample_dataset_index.jsonl \
+  --output_dir outputs/example_report
+```
+
+This command writes the generated report files to:
+
+```text
+outputs/example_report/
+```
+
+The example dataset contains three synthetic records: two successful samples and one failed sample. It can be used to verify the report generation workflow, including sample counts, success rate, failure reasons, timing statistics, motion quality statistics, and instruction type distribution.
+
+This example only tests metadata parsing and report generation. It does not test visual QA, speech transcription, video trimming, ASR evaluation, or real navigation data processing.
+
+## Pilot Results
+
+Pilot statistics can be generated from the current processed dataset using the reporting script.
+
+Generate dataset summary reports:
+
+```bash
+python3 scripts/generate_report.py \
+  --dataset_index outputs/midterm_demo/dataset_index.jsonl \
+  --output_dir outputs/midterm_demo/report
+```
+
+The report includes sample counts, success rate, failure reasons, timing statistics, motion quality statistics, and instruction type distribution when available.
+
+## ASR Evaluation
+
+ASR evaluation requires a small manually annotated ground-truth transcript subset:
+
+```text
+data/annotations/asr_ground_truth.csv
+```
+
+CSV format:
+
+```csv
+sample_id,ground_truth_text
+example_sample_id,manual transcript text
+```
+
+For the midterm version, annotating 20-50 representative samples is sufficient for a preliminary ASR quality estimate. For Chinese-language ASR, character error rate is the primary metric because word segmentation can be ambiguous.
+
+Run ASR evaluation:
+
+```bash
+python3 scripts/evaluate_asr.py \
+  --dataset_index outputs/midterm_demo/dataset_index.jsonl \
+  --ground_truth_csv data/annotations/asr_ground_truth.csv \
+  --output_dir outputs/midterm_demo/asr_eval
+```
+
+This writes `asr_eval_summary.json` and `asr_eval_details.csv`.
+
+## Case Visualization
+
+Generate selected case visualizations:
+
+```bash
+python3 scripts/visualize_sample.py \
+  --dataset_index outputs/midterm_demo/dataset_index.jsonl \
+  --index 0 \
+  --output_dir outputs/midterm_demo/case_0
+
+python3 scripts/visualize_sample.py \
+  --dataset_index outputs/midterm_demo/dataset_index.jsonl \
+  --index 1 \
+  --output_dir outputs/midterm_demo/case_1
+```
+
+Case visualization outputs include `case_summary.json`, `case_summary.md`, `sample_keyframes.png`, and `timing_plot.png` when timing fields are available. `action_curve.png` is generated only when actions are available.
+
+## Current Limitations
+
+- The current pilot dataset has a small sample size and is intended for midterm demonstration and pipeline validation.
+- Current instructions are mostly goal-level task descriptions, not complete low-level navigation commands.
+- The current midterm version does not include ground-truth `dx`, `dy`, `dyaw` action labels.
+- The current collection does not include UAV telemetry or synchronized sensor logs.
+- Whisper transcription quality needs manual validation through the ASR subset.
+- Future scaling will require more data sources, stronger annotation procedures, and more reliable motion-label sources.
+- Optional pseudo-actions, if generated for experiments, should not be reported as real trajectories or ground-truth control labels.
+
+## Release Roadmap
+
+- `midterm_demo`: current pilot version for pipeline validation and presentation.
+- `v0.1`: target 30-50 samples with clearer documentation and ASR validation.
+- `v1.0`: target 500-2,000 samples with stronger subset organization and broader statistics.
+- `large-scale`: future target at 200K-scale samples, not a current result.
+
+The staged release plan is documented in [docs/dataset_release_plan.md](docs/dataset_release_plan.md).
+
+## Next Steps
+
+- Expand the pilot dataset to 30-50 real-world videos for a more reliable midterm evaluation.
+- Report dataset-level statistics, including success rate, timing distribution, quality-score distribution, and instruction-type distribution.
+- Conduct a small-scale ASR evaluation using manually annotated transcripts and character error rate.
+- Select representative case studies to demonstrate speech-motion alignment, navigation clip trimming, and instruction analysis.
+- Explore additional data sources and annotation strategies for scaling toward larger dataset releases.
+- Investigate future motion-label sources, such as visual odometry, SLAM, sensor logs, UAV telemetry, or optional π0-style VLA fine-tuning.
