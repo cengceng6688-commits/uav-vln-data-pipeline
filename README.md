@@ -50,6 +50,8 @@ Important fields:
 
 The recommended midterm setting keeps `actions` empty. Any generated action values are pseudo-labels and must not be reported as ground-truth trajectories or control labels.
 
+
+
 ## Output Structure
 
 Expected midterm output folder:
@@ -72,6 +74,7 @@ Contents:
 - `report/`: dataset summary JSON, CSV, and plots.
 - `case_0/`, `case_1/`: selected case visualizations for presentation.
 - `asr_eval/`: ASR evaluation summary and per-sample CER details.
+
 
 ## Running the Pipeline
 
